@@ -1,57 +1,91 @@
-# Consulta Rápida de Usuários (C)
+# Consulta de Usuários — Tabela Hash + Filtro de Bloom
 
-Programa de terminal em C para consultar grandes volumes de usuários usando
-**tabela hash** (busca O(1) amortizada) e **filtro de Bloom** (checagem
-probabilística de existência ultra rápida).
+Programa de terminal em **C** para armazenar e consultar muitos registros de
+usuários com alta performance. Combina duas estruturas de dados clássicas:
 
-## Compilar
+- **Tabela hash** (encadeamento separado + rehash automático): busca por ID em
+  tempo médio O(1).
+- **Filtro de Bloom**: checagem probabilística de existência muito rápida. Antes
+  de fazer a busca completa, o filtro responde "com certeza não existe" ou
+  "provavelmente existe". Quando ele diz que não existe, a tabela hash nem é
+  consultada.
 
-```bash
-cd c-app
-make
+## Estrutura do projeto
+
+```
+.
+├── Makefile            # compilação e execução
+├── README.md
+├── data/
+│   └── usuarios.txt    # arquivo de exemplo (20 usuários)
+└── src/
+    ├── user.h          # estrutura do usuário
+    ├── bloom.h/.c      # filtro de Bloom
+    ├── hashtable.h/.c  # tabela hash
+    └── main.c          # menu interativo
 ```
 
-Requisitos: `gcc` (ou `clang`) e `make`. Compila com `-Wall -Wextra -O2`.
+## Como compilar e executar
 
-## Executar
-
-```bash
-./bin/usuarios
-```
-
-Ou já carregando um arquivo de entrada:
+Requisitos: `gcc` e `make`.
 
 ```bash
-./bin/usuarios data/usuarios.csv
+make            # compila -> gera bin/consulta
+make run        # compila e executa carregando data/usuarios.txt
+./bin/consulta  # executa sem carregar nada
+./bin/consulta data/usuarios.txt   # carrega um arquivo no início
+make clean      # remove os artefatos de build
 ```
+
+A compilação usa `-Wall -Wextra -O2 -std=c11` e termina **sem erros nem avisos**.
 
 ## Formato do arquivo de entrada
 
-CSV simples separado por `;`, uma linha por usuário, sem cabeçalho:
+Um usuário por linha, com os campos separados por ponto e vírgula (`;`):
 
 ```
-ID;NOME;EMAIL;IDADE;CPF
-1;Ana Souza;ana@example.com;28;123.456.789-00
-2;Bruno Lima;bruno@example.com;34;987.654.321-00
+id;nome;email;idade;cpf
 ```
 
-Veja `data/usuarios.csv` para um exemplo pronto.
+Exemplo:
+
+```
+1;Ana Souza;ana.souza@email.com;28;123.456.789-00
+2;Bruno Lima;bruno.lima@email.com;34;234.567.890-11
+```
+
+Regras:
+
+- Linhas em branco são ignoradas.
+- Linhas que começam com `#` são tratadas como comentário.
+- `id` deve ser um número inteiro (é a chave de busca).
+- Linhas com número de campos diferente de 5 são ignoradas.
 
 ## Menu
 
-1. Carregar arquivo de usuários
-2. Cadastrar usuário manualmente
-3. Consultar usuário por ID (hash)
-4. Verificar existência por ID (filtro de Bloom + hash)
-5. Estatísticas (registros, colisões, tempos de busca)
-6. Listar primeiros N usuários
-0. Sair
+| Opção | Ação |
+|-------|------|
+| 1 | Carregar usuários de um arquivo |
+| 2 | Cadastrar novo usuário manualmente |
+| 3 | Consultar usuário por ID (busca direta na tabela hash) |
+| 4 | Consultar usuário por ID (com filtro de Bloom antes) |
+| 5 | Estatísticas de uso e desempenho |
+| 0 | Sair |
 
-## Estrutura
+## Estatísticas exibidas
 
-- `src/usuario.{h,c}`   — struct de usuário e parser de CSV
-- `src/hash.{h,c}`      — tabela hash com encadeamento separado
-- `src/bloom.{h,c}`     — filtro de Bloom (k funções hash)
-- `src/main.c`          — menu interativo e medição de tempo
-- `Makefile`            — build simples
-- `data/usuarios.csv`   — dados de exemplo
+- **Tabela hash:** registros armazenados, capacidade (baldes), fator de carga e
+  colisões acumuladas.
+- **Filtro de Bloom:** bits totais (`m`), número de funções hash (`k`), bits
+  ligados e taxa estimada de falsos positivos.
+- **Uso/desempenho:** total de consultas, encontradas, descartes feitos pelo
+  Bloom, falsos positivos e o tempo da última busca em microssegundos.
+
+## Detalhes de implementação
+
+- **Hashing:** função `splitmix64` para espalhar os IDs inteiros entre os baldes.
+- **Rehash:** quando o fator de carga passa de 0,75 a capacidade dobra e os nós
+  são redistribuídos (sem realocar cada usuário).
+- **Bloom (double hashing):** as `k` posições são derivadas de duas funções hash
+  via `g_i = h1 + i·h2` (Kirsch & Mitzenmacher). `m` e `k` são dimensionados a
+  partir do número esperado de itens e da taxa de falso positivo alvo.

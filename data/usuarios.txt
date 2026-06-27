@@ -1,0 +1,23 @@
+# Arquivo de exemplo de usuarios
+# Formato (campos separados por ';'):  id;nome;email;idade;cpf
+# Linhas em branco e linhas iniciadas por '#' sao ignoradas.
+1;Ana Souza;ana.souza@email.com;28;123.456.789-00
+2;Bruno Lima;bruno.lima@email.com;34;234.567.890-11
+3;Carla Mendes;carla.mendes@email.com;41;345.678.901-22
+4;Diego Rocha;diego.rocha@email.com;23;456.789.012-33
+5;Elaine Castro;elaine.castro@email.com;37;567.890.123-44
+6;Felipe Andrade;felipe.andrade@email.com;30;678.901.234-55
+7;Gabriela Pinto;gabriela.pinto@email.com;26;789.012.345-66
+8;Henrique Alves;henrique.alves@email.com;45;890.123.456-77
+9;Isabela Nunes;isabela.nunes@email.com;31;901.234.567-88
+10;Joao Pereira;joao.pereira@email.com;39;012.345.678-99
+11;Karina Dias;karina.dias@email.com;29;112.345.678-90
+12;Lucas Martins;lucas.martins@email.com;33;223.456.789-01
+13;Marina Gomes;marina.gomes@email.com;27;334.567.890-12
+14;Nicolas Barros;nicolas.barros@email.com;42;445.678.901-23
+15;Olivia Ramos;olivia.ramos@email.com;36;556.789.012-34
+16;Paulo Cardoso;paulo.cardoso@email.com;48;667.890.123-45
+17;Queila Freitas;queila.freitas@email.com;24;778.901.234-56
+18;Rafael Teixeira;rafael.teixeira@email.com;38;889.012.345-67
+19;Sofia Carvalho;sofia.carvalho@email.com;32;990.123.456-78
+20;Thiago Moreira;thiago.moreira@email.com;40;101.234.567-89

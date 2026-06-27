@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Consulta de Usuários — Hash + Bloom</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Lora:wght@400;600&display=swap');
+
+    :root {
+      --azul:      #1a3a5c;
+      --azul2:     #2563a8;
+      --ambar:     #c47c0a;
+      --verde:     #1a6b45;
+      --vermelho:  #b91c1c;
+      --cinza:     #4b5563;
+      --fundo:     #f8f7f4;
+      --branco:    #ffffff;
+    }
+
+    .reveal {
+      font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+      background: var(--fundo);
+      color: #1f2937;
+      font-size: 28px;
+    }
+
+    .reveal .slides { text-align: left; }
+
+    .reveal h1, .reveal h2, .reveal h3 {
+      font-family: 'Lora', Georgia, serif;
+      color: var(--azul);
+      text-transform: none;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+    .reveal h1 { font-size: 1.8em; }
+    .reveal h2 { font-size: 1.3em; margin-bottom: 0.6em; }
+    .reveal h3 { font-size: 1.0em; color: var(--azul2); }
+
+    .reveal p, .reveal li {
+      line-height: 1.55;
+      color: #1f2937;
+    }
+    .reveal li { margin-bottom: 10px; }
+    .reveal ul, .reveal ol { width: 100%; }
+    .reveal strong { color: var(--azul); }
+
+    /* Tag de seção */
+    .tag {
+      display: inline-block;
+      font-size: 0.46em;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--ambar);
+      border-bottom: 2px solid var(--ambar);
+      padding-bottom: 3px;
+      margin-bottom: 16px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Caixas */
+    .caixa {
+      border-left: 5px solid var(--azul2);
+      background: #e8f0fb;
+      padding: 14px 20px;
+      border-radius: 0 10px 10px 0;
+      margin: 14px 0;
+    }
+    .caixa.amarela  { border-left-color: var(--ambar);    background: #fdf4e3; }
+    .caixa.verde    { border-left-color: var(--verde);    background: #e6f4ed; }
+    .caixa.vermelha { border-left-color: var(--vermelho); background: #fde8e8; }
+    .caixa.cinza    { border-left-color: #9ca3af;         background: #f3f4f6; }
+
+    /* Layout em dois blocos */
+    .duo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* Ícones grandes de texto */
+    .icone {
+      font-size: 2.2em;
+      line-height: 1;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    /* Bloco de passo numerado */
+    .passo {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .passo-num {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--azul);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.85em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .passo-num.ambar { background: var(--ambar); }
+    .passo-num.verde { background: var(--verde); }
+
+    /* Capa */
+    .capa { text-align: center; }
+    .capa h1 { font-size: 1.85em; }
+    .capa .subtitulo {
+      font-size: 0.82em;
+      color: var(--cinza);
+      margin: 4px 0 28px;
+    }
+    .capa .meta {
+      font-size: 0.58em;
+      color: var(--cinza);
+      line-height: 2.0;
+    }
+    .badge {
+      display: inline-block;
+      background: var(--azul);
+      color: #fff;
+      font-size: 0.48em;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      padding: 6px 18px;
+      border-radius: 999px;
+      margin-bottom: 20px;
+    }
+
+    /* Diagrama de fluxo em texto */
+    .fluxo {
+      font-family: 'Courier New', monospace;
+      font-size: 0.62em;
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: 10px;
+      padding: 18px 22px;
+      line-height: 1.7;
+    }
+    .fluxo .sim   { color: #86efac; font-weight: 700; }
+    .fluxo .nao   { color: #fca5a5; font-weight: 700; }
+    .fluxo .caixa-f { color: #93c5fd; }
+
+    /* Comparação lado a lado */
+    .vs-card {
+      border: 2px solid #d1d5db;
+      border-radius: 10px;
+      padding: 16px;
+      background: var(--branco);
+    }
+    .vs-card h3 { margin-bottom: 8px; }
+
+    /* Tabela */
+    .reveal table { font-size: 0.76em; border-collapse: collapse; width: 100%; }
+    .reveal table th {
+      background: var(--azul);
+      color: #fff;
+      padding: 9px 14px;
+      text-align: left;
+      font-family: 'Inter', sans-serif;
+    }
+    .reveal table td { padding: 8px 14px; border-bottom: 1px solid #e5e7eb; }
+    .reveal table tr:nth-child(even) td { background: #f1f5fb; }
+
+    /* Rodapé */
+    .footer {
+      position: fixed;
+      bottom: 12px;
+      left: 18px;
+      font-size: 13px;
+      color: #9ca3af;
+      z-index: 30;
+    }
+
+    .centro { text-align: center; }
+    .pequeno { font-size: 0.8em; }
+    .destaque { color: var(--azul2); font-weight: 700; }
+    .ok  { color: var(--verde); font-weight: 700; }
+    .nao { color: var(--vermelho); font-weight: 700; }
+  </style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+
+<!-- ===== 1. CAPA ===== -->
+<section class="capa">
+  <div class="badge">Estruturas de Dados &amp; Algoritmos</div>
+  <h1>Sistema de Consulta de Usuários em Larga Escala</h1>
+  <p class="subtitulo">Como encontrar uma pessoa entre milhões em frações de segundo</p>
+  <div class="caixa" style="text-align:left; max-width:640px; margin:0 auto 24px;">
+    Um programa em C que combina duas técnicas para responder,
+    de forma rápida e confiável, à pergunta: <strong>"o usuário X existe e quais são seus dados?"</strong>
+  </div>
+  <p class="meta">
+    <strong>Autor(es):</strong>Davi Alves Maia<br>
+    <strong>Disciplina:</strong> Algoritmos e Estruturas de Dados II<br>
+    <strong>Data:</strong> 30/07/2026
+  </p>
+</section>
+
+
+<!-- ===== 2. PROBLEMA ===== -->
+<section>
+  <span class="tag">O Problema</span>
+  <h2>Precisamos ser rápidos — e muito</h2>
+  <p>Imagine um sistema com <strong>milhões de usuários cadastrados</strong>. A cada segundo chegam
+     centenas de perguntas como:</p>
+  <div class="caixa amarela centro" style="font-size:1.1em; margin:16px 0;">
+    "O usuário de ID 4.872.301 existe? Quais são os seus dados?"
+  </div>
+  <p>Verificar um por um, da primeira à última linha, <strong>não funciona em escala</strong>.
+     Uma busca linear demoraria tempo proporcional ao tamanho da lista — inviável.</p>
+  <div class="duo" style="margin-top:18px;">
+    <div class="caixa vermelha">
+      <strong>Problema 1</strong><br>
+      Encontrar um ID que <em>existe</em> rapidamente.
+    </div>
+    <div class="caixa vermelha">
+      <strong>Problema 2</strong><br>
+      Descartar um ID que <em>não existe</em> sem gastar tempo procurando.
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 3. SOLUÇÃO VISÃO GERAL ===== -->
+<section>
+  <span class="tag">A Solução</span>
+  <h2>Duas estruturas, dois papéis</h2>
+  <div class="duo">
+    <div class="vs-card">
+      <span class="icone">🔦</span>
+      <h3>Filtro de Bloom</h3>
+      <p class="pequeno">
+        Um <strong>guarda da entrada</strong>. Responde em frações de segundo:
+        "esse ID definitivamente <span class="nao">não existe</span> — nem precisa procurar"
+        ou "pode existir — pode entrar e verificar".
+      </p>
+    </div>
+    <div class="vs-card">
+      <span class="icone">📇</span>
+      <h3>Tabela Hash</h3>
+      <p class="pequeno">
+        Um <strong>fichário organizado</strong>. Quando o Bloom libera a entrada,
+        a tabela hash vai direto ao local exato do registro,
+        sem percorrer todos os outros.
+      </p>
+    </div>
+  </div>
+  <div class="caixa verde centro" style="margin-top:18px;">
+    Juntas, evitam trabalho desnecessário <strong>antes</strong> de qualquer busca
+    e garantem a resposta <strong>exata</strong> quando necessário.
+  </div>
+</section>
+
+
+<!-- ===== 4. ANALOGIA BLOOM ===== -->
+<section>
+  <span class="tag">Entendendo o Filtro de Bloom</span>
+  <h2>O guarda da catraca</h2>
+  <p>Pense num show com lista VIP. O segurança na catraca tem um <strong>livro de anotações rápidas</strong>
+     (muito menor que a lista completa). Ele consulta esse livro em segundos:</p>
+  <div class="passo">
+    <div class="passo-num vermelha" style="background:#b91c1c;">✗</div>
+    <div><strong>"Esse nome certamente não está na lista."</strong>
+         — O segurança manda embora sem nem chamar o gerente. Rápido, definitivo.</div>
+  </div>
+  <div class="passo">
+    <div class="passo-num ambar">?</div>
+    <div><strong>"Pode estar na lista — vou confirmar com o gerente."</strong>
+         — Aí sim consulta a lista completa (a tabela hash).</div>
+  </div>
+  <div class="caixa amarela" style="margin-top:10px;">
+    <strong>Detalhe importante:</strong> o livro de anotações pode se enganar para um lado — 
+    pode dizer "pode estar" quando na verdade não está (falso positivo). 
+    Mas <span class="ok">nunca nega</span> alguém que realmente está na lista.
+    O gerente (a hash) sempre dá a palavra final.
+  </div>
+</section>
+
+
+<!-- ===== 5. ANALOGIA HASH ===== -->
+<section>
+  <span class="tag">Entendendo a Tabela Hash</span>
+  <h2>O fichário com gavetas numeradas</h2>
+  <p>Imagine uma biblioteca com <strong>gavetas numeradas</strong>. Cada ficha vai para uma gaveta
+     calculada a partir do número do livro — sempre a mesma gaveta para o mesmo número:</p>
+  <div class="passo">
+    <div class="passo-num">1</div>
+    <div>O sistema pega o <strong>ID do usuário</strong> e aplica um cálculo matemático simples.</div>
+  </div>
+  <div class="passo">
+    <div class="passo-num">2</div>
+    <div>O resultado indica <strong>qual gaveta</strong> verificar — direto, sem percorrer todas.</div>
+  </div>
+  <div class="passo">
+    <div class="passo-num">3</div>
+    <div>Se dois IDs caírem na mesma gaveta (colisão), os registros ficam
+         juntos numa <strong>pequena lista dentro da gaveta</strong>.</div>
+  </div>
+  <div class="caixa verde" style="margin-top:10px;">
+    Com as gavetas bem distribuídas, cada uma tem no máximo 1 ou 2 fichas.
+    A busca é praticamente instantânea — tempo constante, independente do tamanho total.
+  </div>
+</section>
+
+
+<!-- ===== 6. FLUXO COMPLETO ===== -->
+<section>
+  <span class="tag">Como Funciona na Prática</span>
+  <h2>O caminho de uma consulta</h2>
+  <div class="fluxo">
+<span class="caixa-f">Você digita: consultar ID 4.872.301</span>
+              │
+              ▼
+  ┌─────────────────────────────────┐
+  │      FILTRO DE BLOOM            │
+  │  "Já vi esse ID antes?"         │
+  └─────────────────────────────────┘
+         │                    │
+  <span class="nao">CERTAMENTE NÃO</span>           <span class="sim">PROVAVELMENTE SIM</span>
+         │                    │
+         ▼                    ▼
+  <span class="nao">DESCARTADO</span>       ┌──────────────────────┐
+  Resposta:        │    TABELA HASH       │
+  "Não existe"     │  Vai direto à gaveta │
+  (&lt; 0,1 µs)      └──────────────────────┘
+                         │          │
+                   <span class="sim">ENCONTRADO</span>   <span class="nao">NÃO ENCONTRADO</span>
+                   Retorna       Bloom errou
+                   os dados      (falso positivo,
+                                  muito raro)
+  </div>
+</section>
+
+
+<!-- ===== 7. O QUE O PROGRAMA ARMAZENA ===== -->
+<section>
+  <span class="tag">Os Dados do Usuário</span>
+  <h2>O que é guardado por registro</h2>
+  <div class="duo">
+    <div>
+      <p>Cada usuário cadastrado possui cinco campos:</p>
+      <ul>
+        <li><strong>ID</strong> — número único de identificação (chave de busca)</li>
+        <li><strong>Nome</strong> — até 128 caracteres</li>
+        <li><strong>E-mail</strong> — até 256 caracteres</li>
+        <li><strong>Idade</strong> — número inteiro</li>
+        <li><strong>CPF</strong> — até 20 caracteres</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Exemplo de arquivo de entrada</h3>
+      <div class="caixa cinza pequeno" style="font-family:monospace; line-height:1.8;">
+        # linhas com # são comentários<br>
+        1;Ana Souza;ana@email.com;28;123.456.789-00<br>
+        2;Carlos Lima;carlos@email.com;34;987.654.321-00<br>
+        7;Beatriz Nunes;bea@email.com;22;111.222.333-44
+      </div>
+      <p class="pequeno">Campos separados por <strong>ponto e vírgula</strong>, um usuário por linha.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 8. REHASH ===== -->
+<section>
+  <span class="tag">Manutenção Automática</span>
+  <h2>Quando as gavetas ficam cheias</h2>
+  <p>Se muitos registros acabam na mesma gaveta, a busca fica mais lenta.
+     O programa monitora isso automaticamente pelo <strong>fator de carga</strong>:</p>
+  <div class="caixa amarela centro" style="font-size:1.05em;">
+    Fator de carga = <strong>quantidade de usuários ÷ número de gavetas</strong>
+  </div>
+  <div class="passo" style="margin-top:18px;">
+    <div class="passo-num ambar">!</div>
+    <div>Quando o fator ultrapassa <strong>0,75</strong> (gavetas ficando cheias),
+         o sistema <strong>dobra o número de gavetas</strong> automaticamente
+         e redistribui todos os registros.</div>
+  </div>
+  <div class="passo">
+    <div class="passo-num verde">✓</div>
+    <div>Resultado: as gavetas ficam sempre com poucos registros,
+         mantendo a busca rápida mesmo com milhões de usuários.</div>
+  </div>
+  <div class="caixa verde pequeno" style="margin-top:10px;">
+    Esse processo se chama <strong>rehash</strong>. O custo é baixo porque o programa
+    apenas reorganiza os ponteiros — não recria os registros do zero.
+  </div>
+</section>
+
+
+<!-- ===== 9. COMPARAÇÃO DESEMPENHO ===== -->
+<section>
+  <span class="tag">Comparação de Desempenho</span>
+  <h2>Por que essa combinação faz diferença</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Situação</th>
+        <th>Busca simples (lista)</th>
+        <th>Hash + Bloom</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ID <strong>existe</strong> (1 M registros)</td>
+        <td>Até 500.000 comparações</td>
+        <td><strong>1–2 comparações</strong></td>
+      </tr>
+      <tr>
+        <td>ID <strong>não existe</strong></td>
+        <td>1.000.000 comparações (percorre tudo)</td>
+        <td><strong>Descartado pelo Bloom</strong> em &lt; 0,1 µs</td>
+      </tr>
+      <tr>
+        <td>Inserção de novo usuário</td>
+        <td>Inserção ao final</td>
+        <td><strong>Direto na gaveta correta</strong></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="caixa amarela" style="margin-top:18px;">
+    Em sistemas reais, a maioria das consultas é por IDs que <em>não existem</em>
+    (tentativas inválidas, erros de digitação). O Bloom descarta esses casos
+    <strong>antes mesmo de tocar nos dados</strong>.
+  </div>
+</section>
+
+
+<!-- ===== 10. MENU DO PROGRAMA ===== -->
+<section>
+  <span class="tag">O Programa em Si</span>
+  <h2>O que você pode fazer no menu</h2>
+  <div class="duo">
+    <div>
+      <div class="passo">
+        <div class="passo-num">1</div>
+        <div><strong>Carregar arquivo</strong><br>
+             <span class="pequeno">Importa um arquivo <code>.txt</code> com usuários cadastrados.</span></div>
+      </div>
+      <div class="passo">
+        <div class="passo-num">2</div>
+        <div><strong>Cadastrar manualmente</strong><br>
+             <span class="pequeno">Digita os dados de um novo usuário diretamente no terminal.</span></div>
+      </div>
+      <div class="passo">
+        <div class="passo-num">3</div>
+        <div><strong>Consultar por ID</strong><br>
+             <span class="pequeno">Busca direta pela tabela hash — retorna os dados e o tempo gasto.</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="passo">
+        <div class="passo-num ambar">4</div>
+        <div><strong>Consultar com Bloom</strong><br>
+             <span class="pequeno">Usa o filtro antes da busca — descarta IDs ausentes na hora.</span></div>
+      </div>
+      <div class="passo">
+        <div class="passo-num verde">5</div>
+        <div><strong>Estatísticas</strong><br>
+             <span class="pequeno">Mostra registros, fator de carga, colisões, taxa de falso positivo
+             e tempo da última busca.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 11. ESTATÍSTICAS ===== -->
+<section>
+  <span class="tag">Painel de Estatísticas</span>
+  <h2>A teoria visível na prática</h2>
+  <p>A opção 5 do menu exibe um painel completo. Cada número tem um significado direto:</p>
+  <table>
+    <thead>
+      <tr><th>Métrica</th><th>O que significa</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Registros carregados</strong></td><td>Total de usuários na memória.</td></tr>
+      <tr><td><strong>Capacidade da tabela</strong></td><td>Número atual de gavetas disponíveis.</td></tr>
+      <tr><td><strong>Fator de carga</strong></td><td>Quão "cheias" estão as gavetas (ideal: abaixo de 0,75).</td></tr>
+      <tr><td><strong>Colisões</strong></td><td>Quantos usuários compartilham gaveta com outro.</td></tr>
+      <tr><td><strong>Bits ligados no Bloom</strong></td><td>Quanto do filtro já foi usado.</td></tr>
+      <tr><td><strong>Taxa de falso positivo</strong></td><td>Chance estimada de o Bloom se enganar (meta: &lt; 1%).</td></tr>
+      <tr><td><strong>Tempo da última busca</strong></td><td>Medido em microssegundos (µs).</td></tr>
+    </tbody>
+  </table>
+</section>
+
+
+<!-- ===== 12. ORGANIZAÇÃO DO CÓDIGO ===== -->
+<section>
+  <span class="tag">Organização do Projeto</span>
+  <h2>Cada parte com sua responsabilidade</h2>
+  <div class="duo">
+    <div>
+      <div class="caixa pequeno" style="margin-bottom:12px;">
+        <strong>user.h</strong><br>
+        Define o "molde" do registro de usuário — quais campos existem e seus tamanhos.
+      </div>
+      <div class="caixa pequeno" style="margin-bottom:12px;">
+        <strong>bloom.h / bloom.c</strong><br>
+        Todo o código do filtro de Bloom: criação, inserção e consulta rápida.
+      </div>
+      <div class="caixa pequeno">
+        <strong>hashtable.h / hashtable.c</strong><br>
+        A tabela hash: inserção, busca, remoção e rehash automático.
+      </div>
+    </div>
+    <div>
+      <div class="caixa amarela pequeno" style="margin-bottom:12px;">
+        <strong>main.c</strong><br>
+        O programa principal: menu interativo, leitura de arquivo,
+        saída colorida no terminal e medição de tempo.
+      </div>
+      <div class="caixa verde pequeno" style="margin-bottom:12px;">
+        <strong>Makefile</strong><br>
+        Automatiza a compilação. Um único comando <code>make</code> e o programa está pronto.
+      </div>
+      <div class="caixa cinza pequeno">
+        <strong>data/usuarios.txt</strong><br>
+        20 usuários de exemplo para testar imediatamente.
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 13. COMPILAÇÃO ===== -->
+<section>
+  <span class="tag">Como Usar o Programa</span>
+  <h2>Simples de compilar e rodar</h2>
+  <p>O projeto foi desenvolvido em <strong>linguagem C</strong>, sem dependências externas.
+     Para usá-lo, basta ter um compilador C (GCC) instalado:</p>
+  <div class="caixa cinza" style="font-family:monospace; font-size:0.82em; line-height:2.0; margin:16px 0;">
+    <strong>make</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    # compila o programa<br>
+    <strong>make run</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    # compila e já abre com o arquivo de exemplo<br>
+    <strong>./bin/consulta arquivo.txt</strong>
+    # carrega qualquer arquivo de usuários
+  </div>
+  <div class="duo">
+    <div class="caixa verde">
+      <strong>Zero erros e zero avisos</strong> na compilação, mesmo com as checagens mais rígidas ativadas.
+    </div>
+    <div class="caixa amarela">
+      Funciona em <strong>qualquer sistema Linux/macOS</strong> com GCC.
+      Sem bibliotecas externas para instalar.
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 14. DEMO ===== -->
+<section>
+  <span class="tag">Demonstração ao Vivo</span>
+  <h2>Roteiro sugerido</h2>
+  <div class="passo">
+    <div class="passo-num">1</div>
+    <div>Executar <code>make run</code> — o programa carrega automaticamente os 20 usuários de exemplo.</div>
+  </div>
+  <div class="passo">
+    <div class="passo-num">2</div>
+    <div>Opção <strong>3</strong>: consultar um ID que existe (ex.: <code>7</code>).
+         Ver os dados e o tempo de busca.</div>
+  </div>
+  <div class="passo">
+    <div class="passo-num ambar">3</div>
+    <div>Opção <strong>4</strong>: consultar um ID que não existe (ex.: <code>999</code>) com Bloom.
+         Ver a mensagem <em>"descartado pelo filtro"</em> — sem busca, sem tempo perdido.</div>
+  </div>
+  <div class="passo">
+    <div class="passo-num ambar">4</div>
+    <div>Opção <strong>2</strong>: cadastrar um novo usuário e consultá-lo em seguida com a opção 4.</div>
+  </div>
+  <div class="passo">
+    <div class="passo-num verde">5</div>
+    <div>Opção <strong>5</strong>: abrir as estatísticas e comentar os números (fator de carga, falso positivo, tempo).</div>
+  </div>
+</section>
+
+
+<!-- ===== 15. LIMITAÇÕES ===== -->
+<section>
+  <span class="tag">Honestidade Técnica</span>
+  <h2>O que o sistema ainda não faz</h2>
+  <div class="duo">
+    <div>
+      <h3>Limitações atuais</h3>
+      <ul class="pequeno">
+        <li>Os dados ficam <strong>apenas na memória</strong> — ao fechar o programa, o que foi adicionado manualmente é perdido.</li>
+        <li>O filtro de Bloom <strong>não suporta remoção</strong> de usuários (marcações de bit não podem ser "desfeitas" facilmente).</li>
+        <li>A busca é <strong>somente por ID</strong> — não é possível buscar por nome, CPF ou e-mail.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Próximos passos possíveis</h3>
+      <ul class="pequeno">
+        <li>Salvar e carregar os dados em formato binário (persistência).</li>
+        <li>Adicionar busca secundária por e-mail ou CPF.</li>
+        <li>Gerar um arquivo com 1 milhão de registros para demonstrar a escala real.</li>
+        <li>Versão com múltiplas consultas simultâneas (threads).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== 16. CONCLUSÃO ===== -->
+<section>
+  <span class="tag">Conclusão</span>
+  <h2>O que foi alcançado</h2>
+  <ul>
+    <li>Um programa funcional em C que <strong>responde consultas em menos de 1 microssegundo</strong> em média.</li>
+    <li>O filtro de Bloom elimina IDs inexistentes <strong>antes de qualquer busca</strong>, poupando processamento.</li>
+    <li>A tabela hash garante acesso <strong>direto e exato</strong> ao registro quando necessário.</li>
+    <li>Código <strong>modular, comentado e sem dependências externas</strong> — fácil de entender e expandir.</li>
+    <li>As estatísticas em tempo real permitem <strong>observar a teoria funcionando</strong> em números reais.</li>
+  </ul>
+  <div class="caixa amarela centro" style="font-size:1.05em; margin-top:20px;">
+    "Não otimize a busca — <strong>evite buscar</strong> quando não for preciso."
+  </div>
+</section>
+
+
+<!-- ===== 17. REFERÊNCIAS ===== -->
+<section>
+  <span class="tag">Referências</span>
+  <h2>Bibliografia</h2>
+  <ul class="pequeno">
+    <li>
+      <strong>CORMEN, T. H. et al.</strong>
+      <em>Introduction to Algorithms</em>. 3ª ed. MIT Press, 2009.
+      <br><span style="color:var(--cinza);">Capítulo sobre Tabelas Hash — fundamento teórico de hashing e encadeamento.</span>
+    </li>
+    <li>
+      <strong>BLOOM, B. H.</strong>
+      "Space/Time Trade-offs in Hash Coding with Allowable Errors".
+      <em>Communications of the ACM</em>, v. 13, n. 7, p. 422–426, 1970.
+      <br><span style="color:var(--cinza);">Artigo original que propôs o filtro de Bloom.</span>
+    </li>
+    <li>
+      <strong>KIRSCH, A.; MITZENMACHER, M.</strong>
+      "Less Hashing, Same Performance: Building a Better Bloom Filter".
+      <em>Algorithmica</em>, 2008.
+      <br><span style="color:var(--cinza);">Técnica de double hashing usada na implementação.</span>
+    </li>
+    <li>
+      <strong>STEELE, G.; LEA, D.; FLOOD, C.</strong>
+      "Fast Splittable Pseudorandom Number Generators".
+      <em>OOPSLA</em>, 2014.
+      <br><span style="color:var(--cinza);">Algoritmo splitmix64 usado como função de hash.</span>
+    </li>
+  </ul>
+  <div class="caixa verde centro" style="margin-top:22px; font-size:1.1em;">
+    <strong>Obrigado!</strong> &nbsp; Perguntas?
+  </div>
+</section>
+
+
+<!-- ===== ANEXO: Q&A ===== -->
+<section>
+  <span class="tag">Anexo — Perguntas Prováveis</span>
+  <h2>Respostas rápidas para a banca</h2>
+  <div class="pequeno">
+    <div class="caixa" style="margin-bottom:10px;">
+      <strong>O Bloom pode dar uma resposta errada?</strong><br>
+      Só num sentido: pode dizer "provavelmente existe" quando não existe (falso positivo, &lt; 1% dos casos).
+      Nunca diz "não existe" para algo que foi cadastrado. A hash sempre confirma.
+    </div>
+    <div class="caixa" style="margin-bottom:10px;">
+      <strong>Por que não usar somente a tabela hash?</strong><br>
+      A hash funciona muito bem para IDs que existem. O Bloom poupa o acesso à hash
+      quando o ID não existe — evita percorrer a lista de uma gaveta sem necessidade.
+    </div>
+    <div class="caixa" style="margin-bottom:10px;">
+      <strong>O que acontece quando a tabela cresce demais?</strong><br>
+      O rehash dobra o número de gavetas automaticamente quando necessário,
+      mantendo a busca sempre rápida. O custo é diluído ao longo das inserções.
+    </div>
+    <div class="caixa">
+      <strong>Por que C e não Python ou Java?</strong><br>
+      C permite controle direto de memória e aritmética de bits, essencial para
+      implementar o vetor de bits do Bloom de forma eficiente e medir tempos reais em microssegundos.
+    </div>
+  </div>
+</section>
+
+
+</div>
+</div>
+
+<div class="footer">Hash + Bloom &nbsp;·&nbsp; Estruturas de Dados</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    transition: 'fade',
+    transitionSpeed: 'fast',
+    width: 1280,
+    height: 720,
+    margin: 0.06,
+    controls: true,
+    progress: true,
+    plugins: [ RevealNotes ]
+  });
+</script>
+</body>
+</html>
