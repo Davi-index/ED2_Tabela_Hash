@@ -89,3 +89,52 @@ static int ler_linha(char *buf, size_t tam) {
     remove_quebra_linha(buf);
     return 1;
 }
+
+/*
+ * Faz o parse de uma linha "id;nome;email;idade;cpf" para um Usuario.
+ * Retorna 1 em sucesso, 0 se a linha for invalida.
+ */
+static int parse_linha_usuario(char *linha, Usuario *u) {
+    char *campos[5];
+    int n = 0;
+    char *p = linha;
+
+    /* Divide manualmente em ';' (strtok colapsaria campos vazios). */
+    campos[n++] = p;
+    while (*p && n < 5) {
+        if (*p == ';') {
+            *p = '\0';
+            campos[n++] = p + 1;
+        }
+        p++;
+    }
+    if (n != 5) return 0;
+
+    /* id */
+    char *fim = NULL;
+    unsigned long long id = strtoull(campos[0], &fim, 10);
+    if (fim == campos[0]) return 0;
+
+    /* idade */
+    char *fim2 = NULL;
+    long idade = strtol(campos[3], &fim2, 10);
+    if (fim2 == campos[3]) idade = 0;
+
+    u->id = (uint64_t) id;
+    copia_str(u->nome,  USER_NOME_MAX,  campos[1]);
+    copia_str(u->email, USER_EMAIL_MAX, campos[2]);
+    u->idade = (int) idade;
+    copia_str(u->cpf,   USER_CPF_MAX,   campos[4]);
+    return 1;
+}
+
+/* Imprime um cartao formatado com os dados de um usuario. */
+static void imprime_usuario(const Usuario *u) {
+    printf("  " C_GREEN "+-----------------------------------------------+\n" C_RESET);
+    printf("  " C_GREEN "|" C_RESET " " C_BOLD "ID    " C_RESET ": %-37llu " C_GREEN "|\n" C_RESET, (unsigned long long) u->id);
+    printf("  " C_GREEN "|" C_RESET " " C_BOLD "Nome  " C_RESET ": %-37.37s " C_GREEN "|\n" C_RESET, u->nome);
+    printf("  " C_GREEN "|" C_RESET " " C_BOLD "Email " C_RESET ": %-37.37s " C_GREEN "|\n" C_RESET, u->email);
+    printf("  " C_GREEN "|" C_RESET " " C_BOLD "Idade " C_RESET ": %-37d " C_GREEN "|\n" C_RESET, u->idade);
+    printf("  " C_GREEN "|" C_RESET " " C_BOLD "CPF   " C_RESET ": %-37.37s " C_GREEN "|\n" C_RESET, u->cpf);
+    printf("  " C_GREEN "+-----------------------------------------------+\n" C_RESET);
+}
