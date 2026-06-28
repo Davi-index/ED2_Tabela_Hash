@@ -44,11 +44,11 @@
 #define BLOOM_N_ESPERADO   100000
 #define BLOOM_P            0.01
 
-/* ----------------------- Estado / estatisticas ----------------------- */
+/* ----------------------- Estado / Estatisticas ----------------------- */
 typedef struct {
     HashTable   *ht;
     BloomFilter *bloom;
-    /* Contadores de uso para o painel de estatisticas. */
+    /* Contadores de uso para o painel de Estatisticas. */
     unsigned long consultas_total;
     unsigned long consultas_encontradas;
     unsigned long bloom_descartes;       /* vezes que o Bloom evitou a busca */
@@ -56,7 +56,7 @@ typedef struct {
     double        ultimo_tempo_us;       /* tempo da ultima busca, em microssegundos */
 } App;
 
-/* ------------------------- Funcoes utilitarias ------------------------ */
+/* ------------------------- Funções Utilitarias ------------------------ */
 
 /* Tempo monotonico em segundos com alta resolucao. */
 static double agora_segundos(void) {
@@ -83,7 +83,7 @@ static void remove_quebra_linha(char *s) {
     }
 }
 
-/* Le uma linha inteira do stdin de forma segura. Retorna 0 em EOF. */
+/* Lê uma linha inteira do stdin de forma segura. Retorna 0 em EOF. */
 static int ler_linha(char *buf, size_t tam) {
     if (!fgets(buf, (int) tam, stdin)) return 0;
     remove_quebra_linha(buf);
@@ -128,7 +128,7 @@ static int parse_linha_usuario(char *linha, Usuario *u) {
     return 1;
 }
 
-/* Imprime um cartao formatado com os dados de um usuario. */
+/* Imprime um cartão formatado com os dados de um usuário. */
 static void imprime_usuario(const Usuario *u) {
     printf("  " C_GREEN "+-----------------------------------------------+\n" C_RESET);
     printf("  " C_GREEN "|" C_RESET " " C_BOLD "ID    " C_RESET ": %-37llu " C_GREEN "|\n" C_RESET, (unsigned long long) u->id);
@@ -139,9 +139,9 @@ static void imprime_usuario(const Usuario *u) {
     printf("  " C_GREEN "+-----------------------------------------------+\n" C_RESET);
 }
 
-/* ----------------------------- Acoes -------------------------------- */
+/* ----------------------------- Ações -------------------------------- */
 
-/* Opcao 1: carrega usuarios de um arquivo texto. */
+/* Opcão 1: carrega usuarios de um arquivo texto. */
 static void acao_carregar_arquivo(App *app) {
     char caminho[512];
     printf(C_CYAN "Caminho do arquivo " C_DIM "(ex.: data/usuarios.txt)" C_RESET ": ");
@@ -162,7 +162,7 @@ static void acao_carregar_arquivo(App *app) {
 
     while (fgets(linha, sizeof(linha), f)) {
         remove_quebra_linha(linha);
-        if (linha[0] == '\0' || linha[0] == '#') continue; /* pula vazio/comentario */
+        if (linha[0] == '\0' || linha[0] == '#') continue; /* pula vazio/comentário */
         lidos++;
 
         Usuario u;
@@ -185,7 +185,7 @@ static void acao_carregar_arquivo(App *app) {
     printf("  Total na tabela      : " C_BOLD "%zu\n" C_RESET, app->ht->tamanho);
 }
 
-/* Opcao 2: cadastra um usuario manualmente. */
+/* Opção 2: cadastra um usuário manualmente. */
 static void acao_cadastrar(App *app) {
     Usuario u;
     char buf[256];
@@ -255,7 +255,7 @@ static void buscar_por_id(App *app, uint64_t id, int usar_bloom) {
         printf(C_DIM "  (%.3f us, %d passo(s) no balde)\n" C_RESET, app->ultimo_tempo_us, passos);
         imprime_usuario(u);
     } else {
-        /* Se o Bloom disse "talvez" mas nao achamos, foi um falso positivo. */
+        /* Se o Bloom disse "talvez" mas não achamos, foi um falso positivo. */
         if (usar_bloom) app->bloom_falsos_positivos++;
         printf(C_RED "\nUsuario com ID %llu nao encontrado." C_RESET, (unsigned long long) id);
         printf(C_DIM "  (%.3f us)\n" C_RESET, app->ultimo_tempo_us);
@@ -265,7 +265,7 @@ static void buscar_por_id(App *app, uint64_t id, int usar_bloom) {
     }
 }
 
-/* Le um ID do usuario e dispara a busca. */
+/* Le um ID do usuário e dispara a busca. */
 static void acao_consultar(App *app, int usar_bloom) {
     char buf[64];
     printf(C_CYAN "Digite o ID a consultar: " C_RESET);
@@ -277,7 +277,7 @@ static void acao_consultar(App *app, int usar_bloom) {
     buscar_por_id(app, id, usar_bloom);
 }
 
-/* Opcao 5: painel de estatisticas de uso e desempenho. */
+/* Opção 5: painel de estatisticas de uso e desempenho. */
 static void acao_estatisticas(App *app) {
     printf(C_BOLD C_CYAN "\n========== ESTATISTICAS ==========\n" C_RESET);
 
