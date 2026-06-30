@@ -91,3 +91,7 @@ Regras:
   partir do número esperado de itens e da taxa de falso positivo alvo.
 
 ## Referências
+<strong>CORMEN, T. H. et al.</strong>
+      <em>Introduction to Algorithms</em>. 3ª ed. MIT Press, 2009.
+      <br><span style="color:var(--cinza);">Capítulo sobre Tabelas Hash — fundamento teórico de hashing e encadeamento.</span>
+    
