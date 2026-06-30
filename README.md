@@ -89,3 +89,5 @@ Regras:
 - **Bloom (double hashing):** as `k` posições são derivadas de duas funções hash
   via `g_i = h1 + i·h2` (Kirsch & Mitzenmacher). `m` e `k` são dimensionados a
   partir do número esperado de itens e da taxa de falso positivo alvo.
+
+## Referências
