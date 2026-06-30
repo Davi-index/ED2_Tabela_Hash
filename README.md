@@ -91,7 +91,13 @@ Regras:
   partir do número esperado de itens e da taxa de falso positivo alvo.
 
 ## Referências
+<li>
 <strong>CORMEN, T. H. et al.</strong>
       <em>Introduction to Algorithms</em>. 3ª ed. MIT Press, 2009.
       <br><span style="color:var(--cinza);">Capítulo sobre Tabelas Hash — fundamento teórico de hashing e encadeamento.</span>
-    
+<li>
+  <strong>BLOOM, B. H.</strong>
+      "Space/Time Trade-offs in Hash Coding with Allowable Errors".
+      <em>Communications of the ACM</em>, v. 13, n. 7, p. 422–426, 1970.
+      <br><span style="color:var(--cinza);">Artigo original que propôs o filtro de Bloom.</span>
+<li>
