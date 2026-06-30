@@ -101,3 +101,7 @@ Regras:
       <em>Communications of the ACM</em>, v. 13, n. 7, p. 422–426, 1970.
       <br><span style="color:var(--cinza);">Artigo original que propôs o filtro de Bloom.</span>
 <li>
+<strong>KIRSCH, A.; MITZENMACHER, M.</strong>
+      "Less Hashing, Same Performance: Building a Better Bloom Filter".
+      <em>Algorithmica</em>, 2008.
+      <br><span style="color:var(--cinza);">Técnica de double hashing usada na implementação.</span>
