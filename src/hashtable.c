@@ -1,19 +1,10 @@
-/*
- * hashtable.c
- * -----------
- * Implementacao da tabela hash com encadeamento separado e rehash
- * automatico. A funcao de hash usa o misturador splitmix64 para
- * espalhar bem os IDs inteiros entre os baldes.
- */
 #include "hashtable.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-/* Fator de carga maximo antes de dobrar a capacidade. */
 #define HT_FATOR_CARGA_MAX 0.75
 
-/* Mistura de 64 bits (mesma ideia usada no filtro de Bloom). */
 static uint64_t mix64(uint64_t x) {
     x += 0x9E3779B97F4A7C15ULL;
     x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
@@ -21,12 +12,10 @@ static uint64_t mix64(uint64_t x) {
     return x ^ (x >> 31);
 }
 
-/* Indice do balde para uma chave dada uma capacidade. */
 static size_t indice_balde(uint64_t id, size_t capacidade) {
     return (size_t) (mix64(id) % capacidade);
 }
 
-/* Arredonda a capacidade para um numero impar minimo razoavel. */
 static size_t normaliza_capacidade(size_t c) {
     if (c < 16) c = 16;
     return c;
@@ -61,10 +50,6 @@ void ht_free(HashTable *ht) {
     free(ht);
 }
 
-/*
- * Dobra a capacidade e redistribui todos os nos. Reaproveita os nos
- * existentes (apenas religa os ponteiros), sem realocar cada usuario.
- */
 static int ht_rehash(HashTable *ht) {
     size_t nova_cap = ht->capacidade * 2;
     HashNode **novos = calloc(nova_cap, sizeof(HashNode *));
@@ -89,7 +74,6 @@ static int ht_rehash(HashTable *ht) {
 int ht_insert(HashTable *ht, const Usuario *u) {
     size_t idx = indice_balde(u->id, ht->capacidade);
 
-    /* Se ja existe um usuario com este id, atualiza no lugar. */
     for (HashNode *no = ht->baldes[idx]; no != NULL; no = no->next) {
         if (no->usuario.id == u->id) {
             no->usuario = *u;
@@ -101,7 +85,6 @@ int ht_insert(HashTable *ht, const Usuario *u) {
     if (!novo) return 0;
     novo->usuario = *u;
 
-    /* Se o balde ja tinha algo, contamos como colisao. */
     if (ht->baldes[idx] != NULL) {
         ht->colisoes++;
     }
